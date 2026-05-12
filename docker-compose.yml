@@ -1,0 +1,47 @@
+services:
+  web:
+    platform: linux/arm64/v8
+    build: .
+    container_name: fixedasset_web
+
+    env_file:
+      - .env
+    
+    ports:
+      - "8088:80"
+    volumes:
+      - ./src/fixedasset:/var/www/html
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    platform: linux/arm64/v8
+    image: mysql:8.2
+    container_name: fixedasset_db
+    environment:
+      MYSQL_ROOT_PASSWORD: HiNara@123
+      MYSQL_DATABASE: asset_db
+    ports:
+      - "3311:3306"
+    volumes:
+      - fixedasset_mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+
+  phpmyadmin:
+    platform: linux/arm64/v8
+    image: phpmyadmin:latest
+    container_name: fixedasset_phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: HiNara@123
+    ports:
+      - "8011:80"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  fixedasset_mysql_data:

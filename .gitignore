@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# Logs
+*.log
+
+# Vendor
+vendor/
+
+# Environment
+.env
+
+# MySQL data
+mysql_data/
+*.sql
+
+# Uploads
+uploads/
+storage/
+tmp/
+
+# Docker
+docker-data/
+
+# Composer
+composer.lock
+
+# Node
+node_modules/
