@@ -1,15 +1,21 @@
 <?php
+
 session_start();
 require_once '../config.php';
 require_once '../vendor/autoload.php';
-include '../template/header2.php';
+
+// [FIX] Docker/PHP 8 migration:
+// ห้าม include header2.php ตรงนี้
+// เพราะ header2.php มี HTML output
+// ถ้า include ก่อน header("Location: mercado.php")
+// จะเกิด error: Cannot modify header information - headers already sent
 
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\Writer\PngWriter;
 
 if (!isset($_SESSION['user']) || !is_array($_SESSION['user'])) {
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit;
 }
 $user = $_SESSION['user'];
@@ -219,6 +225,9 @@ $asset_types = $conn->query("
     GROUP BY name
     ORDER BY name ASC
 ");
+// [FIX] include header2.php หลังจาก insert/update/delete redirect logic เสร็จแล้วเท่านั้น
+// เพื่อให้ header("Location: mercado.php") ทำงานได้ก่อนมี HTML output
+include '../template/header2.php';
 ?>
 
 <div class="container mt-4">
@@ -373,7 +382,10 @@ foreach ($fields as $f => $label): ?>
                 <td><?= $i++ ?></td>
                 <td><?= htmlspecialchars($row['code_id']) ?></td>
                 <td><?= htmlspecialchars($row['name']) ?></td>
-                <td><?= htmlspecialchars($row['position_name']) ?></td>
+                <!-- [FIX] PHP 8 / Docker migration:
+                บางรายการไม่มี position_id ที่ match กับตาราง positions
+                ทำให้ position_name เป็น NULL และ htmlspecialchars(NULL) จะขึ้น Deprecated warning -->
+                <td><?= htmlspecialchars($row['position_name'] ?? '') ?></td>
                 <td><?= htmlspecialchars($row['location_name']) ?></td>
                 <td><?= htmlspecialchars($row['serialno']) ?></td>
                 <td><?= htmlspecialchars($row['model']) ?></td>

@@ -1,5 +1,5 @@
 <?php
-session_start(); //ต้องอยู่บรรทัดแรกสุดของไฟล์เพื่อให้แน่ใจว่า session ถูกเริ่มต้นก่อนใช้งาน
+session_start();
 include '../config.php';
 include '../template/header2.php';
 require_once '../vendor/autoload.php';
@@ -8,7 +8,6 @@ $user = $_SESSION['user'] ?? ['can_edit' => 0, 'can_delete' => 0];
 $can_edit = $user['can_edit'] ?? 0;
 $can_delete = $user['can_delete'] ?? 0;
 
-// Filter & search
 $search = $_GET['search'] ?? '';
 $location_id = $_GET['location_id'] ?? '';
 
@@ -22,26 +21,22 @@ if ($search !== '') {
 }
 if ($location_id !== '') $where .= " AND n.location_id = " . intval($location_id);
 
-// pagination
 $limit = 50;
 $page = max(1, intval($_GET['page'] ?? 1));
 $offset = ($page - 1) * $limit;
 $total = $conn->query("SELECT COUNT(*) AS c FROM ups n LEFT JOIN locations l ON n.location_id=l.id $where")->fetch_assoc()['c'];
 $total_pages = ceil($total / $limit);
 
-// Dropdown data
 $locations = $conn->query("SELECT * FROM locations");
 
-// Edit form
 $id = $_GET['edit'] ?? '';
-$edit = ['code_id'=>'','location_id'=>'','model'=>'','serial_no'=>'','note'=>''];
+$edit = ['code_id'=>'','location_id'=>'','model'=>'','serial_no'=>'','remark'=>''];
 if ($id) {
-    $res = $conn->query("SELECT * FROM ups WHERE id=" . intval($id));
+    $res = $conn->query("SELECT code_id, location_id, model, serial_no, remark FROM ups WHERE id=" . intval($id));
     if ($res) $edit = $res->fetch_assoc();
     unset($edit['id']);
 }
 
-// Main query
 $data = $conn->query("
     SELECT n.*, l.name AS location_name
     FROM ups n
@@ -56,7 +51,7 @@ $data = $conn->query("
 <head>
   <meta charset="UTF-8">
   <title>UPS Assets</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
 </head>
 <body>
 <div class="container py-3">
@@ -91,7 +86,6 @@ $data = $conn->query("
 
   <a href="export_ups_excel.php" class="btn btn-outline-primary mb-3">Export Excel</a>
 
-  <!-- Filter -->
   <form method="get" class="row mb-3 g-2">
     <div class="col-md-3"><input type="text" name="search" value="<?= htmlspecialchars($search) ?>" class="form-control" placeholder="ค้นหาทุกช่อง..."></div>
     <div class="col-md-3">
@@ -106,7 +100,6 @@ $data = $conn->query("
     <div class="col-md-2"><a href="ups.php" class="btn btn-secondary w-100">ล้าง</a></div>
   </form>
 
-  <!-- Pagination -->
   <nav><ul class="pagination">
     <?php for($i=1;$i<=$total_pages;$i++): ?>
       <li class="page-item <?= $i==$page?'active':'' ?>">
@@ -116,12 +109,11 @@ $data = $conn->query("
   </ul></nav>	
 	
 	
-  <!-- Table -->
   <table class="table table-bordered table-sm align-middle">
     <thead class="table-light">
       <tr>
         <th>#</th><th>Code</th><th>Location</th><th>Model</th>
-        <th>Serial no</th><th>Note</th><th width="130">Action</th>
+        <th>Serial no</th><th>Remark</th><th width="130">Action</th>
       </tr>
     </thead>
     <tbody>
@@ -148,7 +140,6 @@ $data = $conn->query("
     </tbody>
   </table>
 
-  <!-- Pagination -->
   <nav><ul class="pagination">
     <?php for($i=1;$i<=$total_pages;$i++): ?>
       <li class="page-item <?= $i==$page?'active':'' ?>">
@@ -158,3 +149,4 @@ $data = $conn->query("
   </ul></nav>
 </div>
 <?php include '../template/footer.php'; ?>
+

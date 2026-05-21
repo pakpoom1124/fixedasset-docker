@@ -109,7 +109,10 @@ $data = $conn->query("
     <?php else: ?>
       <div class="col-md-3">
         <label class="form-label"><?= ucfirst(str_replace('_', ' ', $k)) ?></label>
-        <input name="<?= $k ?>" class="form-control" value="<?= htmlspecialchars($v) ?>">
+        <!-- [FIX] PHP 8 / Docker migration:
+        ค่า $v จาก database อาจเป็น NULL
+        htmlspecialchars(NULL) จะขึ้น Deprecated warning -->
+      <input name="<?= $k ?>" class="form-control" value="<?= htmlspecialchars($v ?? '') ?>">
       </div>
     <?php endif; endforeach ?>
     <div class="col-md-3 d-flex align-items-end">
@@ -122,7 +125,8 @@ $data = $conn->query("
   <!-- Filter form -->
   <form method="get" class="row mb-3 g-2">
     <div class="col-md-3">
-      <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" class="form-control" placeholder="ค้นหาทุกช่อง...">
+      <!-- [FIX] ป้องกันกรณี $search เป็น NULL -->
+      <input type="text" name="search" value="<?= htmlspecialchars($search ?? '') ?>" class="form-control" placeholder="ค้นหาทุกช่อง...">
     </div>
     <div class="col-md-2">
       <select name="location_id" class="form-select">
@@ -167,15 +171,19 @@ $data = $conn->query("
       <?php while($row = $data->fetch_assoc()): ?>
       <tr>
         <td><?= $i++ ?></td>
-        <td><?= htmlspecialchars($row['code_id']) ?></td>
-        <td><?= htmlspecialchars($row['location_name']) ?></td>
-		<td><?= htmlspecialchars($row['name']) ?></td>  
-		<td><?= htmlspecialchars($row['type_name']) ?></td>                  
-        <td><?= htmlspecialchars($row['ip_address']) ?></td>
-        <td><?= htmlspecialchars($row['model']) ?></td>
-        <td><?= htmlspecialchars($row['serial_no']) ?></td>
-        <td><?= htmlspecialchars($row['remark']) ?></td>
-        <td>
+        <!-- [FIX] PHP 8 / Docker migration:
+            ข้อมูล legacy บางแถวเป็น NULL
+            htmlspecialchars(NULL) จะขึ้น Deprecated warning
+            จึงใส่ ?? '' fallback ทุก field ที่แสดงผล -->
+        <td><?= htmlspecialchars($row['code_id'] ?? '') ?></td>
+        <td><?= htmlspecialchars($row['location_name'] ?? '') ?></td>
+        <td><?= htmlspecialchars($row['name'] ?? '') ?></td>  
+        <td><?= htmlspecialchars($row['type_name'] ?? '') ?></td>                  
+        <td><?= htmlspecialchars($row['ip_address'] ?? '') ?></td>
+        <td><?= htmlspecialchars($row['model'] ?? '') ?></td>
+        <td><?= htmlspecialchars($row['serial_no'] ?? '') ?></td>
+        <td><?= htmlspecialchars($row['remark'] ?? '') ?></td>
+        <td>  
 		  <?php if ($can_edit): ?>	
           <a href="?edit=<?= $row['id'] ?>" class="btn btn-sm btn-warning">✏️</a>
 		  <?php endif ?>
