@@ -1,14 +1,20 @@
 <?php
-session_start(); //ต้องอยู่บรรทัดแรกสุดของไฟล์เพื่อให้แน่ใจว่า session ถูกเริ่มต้นก่อนใช้งาน
+// [FIX] ต้อง session_start() ก่อน include header2.php
+// เพราะ header2.php มี HTML output ถ้า include ก่อน session_start จะขึ้น warning
+session_start();
+
 include '../config.php';
-include '../template/header2.php';
 require_once '../vendor/autoload.php';
 
 $user = $_SESSION['user'] ?? ['can_edit' => 0, 'can_delete' => 0];
 $can_edit = $user['can_edit'] ?? 0;
 $can_delete = $user['can_delete'] ?? 0;
 
-// Filter & search
+// [FIX] include header2.php หลัง session_start() เท่านั้น
+include '../template/header2.php';
+$can_edit = $user['can_edit'] ?? 0;
+$can_delete = $user['can_delete'] ?? 0;
+
 $search = $_GET['search'] ?? '';
 $location_id = $_GET['location_id'] ?? '';
 $asset_type_id = $_GET['asset_type_id'] ?? '';
@@ -25,16 +31,13 @@ if ($search !== '') {
 if ($location_id !== '') $where .= " AND n.location_id = " . intval($location_id);
 if ($asset_type_id !== '') $where .= " AND n.asset_type_id = " . intval($asset_type_id);
 
-// pagination
 $limit = 50;
 $page = max(1, intval($_GET['page'] ?? 1));
 $offset = ($page - 1) * $limit;
 $total = $conn->query("SELECT COUNT(*) AS c FROM printer n LEFT JOIN locations l ON n.location_id=l.id LEFT JOIN asset_types t ON n.asset_type_id=t.id $where")->fetch_assoc()['c'];
 $total_pages = ceil($total / $limit);
 
-// Dropdown data
 $locations = $conn->query("SELECT * FROM locations");
-//$types = $conn->query("SELECT * FROM asset_types");
 $types = $conn->query("
     SELECT at.id, at.name, c.cat_name 
     FROM asset_types at 
@@ -43,17 +46,14 @@ $types = $conn->query("
     ORDER BY at.name ASC
 ");
 
-
-// Edit form
 $id = $_GET['edit'] ?? '';
-$edit = ['code_id'=>'','location_id'=>'','name'=>'','asset_type_id'=>'','ip_address'=>'','firstname'=>'','model'=>'','serial_no'=>'','note'=>''];
+$edit = ['code_id'=>'','location_id'=>'','name'=>'','asset_type_id'=>'','ip_address'=>'','firstname'=>'','model'=>'','serial_no'=>'','remark'=>''];
 if ($id) {
     $res = $conn->query("SELECT * FROM printer WHERE id=" . intval($id));
     if ($res) $edit = $res->fetch_assoc();
     unset($edit['id']);
 }
 
-// Main query
 $data = $conn->query("
     SELECT n.*, l.name AS location_name, t.name AS type_name
     FROM printer n
@@ -69,7 +69,7 @@ $data = $conn->query("
 <head>
   <meta charset="UTF-8">
   <title>Printer Assets</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
 </head>
 <body>
 <div class="container py-3">
@@ -115,7 +115,6 @@ $data = $conn->query("
 
   <a href="export_printer_excel.php" class="btn btn-outline-primary mb-3">Export Excel</a>
 
-  <!-- Filter -->
   <form method="get" class="row mb-3 g-2">
     <div class="col-md-3"><input type="text" name="search" value="<?= htmlspecialchars($search) ?>" class="form-control" placeholder="ค้นหาทุกช่อง..."></div>
     <div class="col-md-2">
@@ -138,7 +137,6 @@ $data = $conn->query("
     <div class="col-md-2"><a href="printer.php" class="btn btn-secondary w-100">ล้าง</a></div>
   </form>
 
-  <!-- Pagination -->
   <nav><ul class="pagination">
     <?php for($i=1;$i<=$total_pages;$i++): ?>
       <li class="page-item <?= $i==$page?'active':'' ?>">
@@ -148,7 +146,6 @@ $data = $conn->query("
   </ul></nav>	
 	
 	
-  <!-- Table -->
   <table class="table table-bordered table-sm align-middle">
     <thead class="table-light">
       <tr>
@@ -160,15 +157,18 @@ $data = $conn->query("
       <?php while($row = $data->fetch_assoc()): ?>
       <tr>
         <td><?= $i++ ?></td>
-        <td><?= htmlspecialchars($row['code_id']) ?></td>
-        <td><?= htmlspecialchars($row['location_name']) ?></td>
-        <td><?= htmlspecialchars($row['name']) ?></td>
-        <td><?= htmlspecialchars($row['type_name']) ?></td>
-		<td><?= htmlspecialchars($row['ip_address']) ?></td>  
-        <td><?= htmlspecialchars($row['firstname']) ?></td>        
-        <td><?= htmlspecialchars($row['model']) ?></td>
-        <td><?= htmlspecialchars($row['serial_no']) ?></td>
-        <td><?= htmlspecialchars($row['remark']) ?></td>
+        <!-- [FIX] PHP 8 / Docker migration:
+            ข้อมูลบางแถวเป็น NULL
+            htmlspecialchars(NULL) จะขึ้น Deprecated warning -->
+        <td><?= htmlspecialchars($row['code_id'] ?? '') ?></td>
+        <td><?= htmlspecialchars($row['location_name'] ?? '') ?></td>
+        <td><?= htmlspecialchars($row['name'] ?? '') ?></td>
+        <td><?= htmlspecialchars($row['type_name'] ?? '') ?></td>
+        <td><?= htmlspecialchars($row['ip_address'] ?? '') ?></td>  
+        <td><?= htmlspecialchars($row['firstname'] ?? '') ?></td>        
+        <td><?= htmlspecialchars($row['model'] ?? '') ?></td>
+        <td><?= htmlspecialchars($row['serial_no'] ?? '') ?></td>
+        <td><?= htmlspecialchars($row['remark'] ?? '') ?></td>
         <td>
           <?php if ($can_edit): ?>
           <a href="?edit=<?= $row['id'] ?>" class="btn btn-sm btn-warning">✏️</a>
@@ -183,7 +183,6 @@ $data = $conn->query("
     </tbody>
   </table>
 
-  <!-- Pagination -->
   <nav><ul class="pagination">
     <?php for($i=1;$i<=$total_pages;$i++): ?>
       <li class="page-item <?= $i==$page?'active':'' ?>">
